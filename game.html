@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>דוקטור למילים - תקן את הסיפור</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --secondary: #f5a623;
+            --success: #7ed321;
+            --error: #d0021b;
+            --bg-color: #2c3e50;
+            --card-bg: rgba(255, 255, 255, 0.95);
+        }
+
+        body {
+            font-family: 'Rubik', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            color: #333;
+        }
+
+        /* רקע כללי מטושטש כמו בתמונות */
+        .background-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('https://images.unsplash.com/photo-1522770179533-24471fcdba45?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            filter: blur(8px);
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        #game-container {
+            width: 90%;
+            max-width: 800px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+        /* סגנון למשפט */
+        .sentence-container {
+            font-size: 2.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 40px;
+            direction: rtl;
+        }
+
+        .word {
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 10px;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .word:hover {
+            background-color: #e6f2ff;
+            transform: scale(1.05);
+        }
+
+        /* סימון טעות/הצלחה */
+        .word.wrong-choice {
+            background-color: #ffe6e6;
+            border-color: var(--error);
+            animation: shake 0.5s;
+        }
+
+        .word.correct-target {
+            background-color: #ffe0b2;
+            border-color: var(--secondary);
+            font-weight: bold;
+        }
+
+        .word.fixed {
+            color: var(--success);
+            font-weight: bold;
+            animation: pop 0.5s;
+        }
+
+        /* אזור האפשרויות */
+        #options-area {
+            display: none; /* מוסתר בהתחלה */
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 400px;
+            margin-top: 20px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid var(--primary);
+            padding: 15px;
+            font-size: 1.5rem;
+            border-radius: 50px;
+            cursor: pointer;
+            font-family: 'Rubik', sans-serif;
+            transition: all 0.2s;
+        }
+
+        .option-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .option-btn.wrong {
+            background: var(--error);
+            color: white;
+            border-color: var(--error);
+        }
+
+        .option-btn.correct {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        /* הודעות מערכת */
+        #message {
+            margin-top: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            height: 30px;
+        }
+        
+        .msg-error { color: var(--error); }
+        .msg-success { color: var(--success); }
+        .msg-info { color: var(--secondary); }
+
+        /* כפתור התחלה / סיום */
+        .action-btn {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.8rem;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(245, 166, 35, 0.4);
+            margin-top: 20px;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(245, 166, 35, 0.6);
+        }
+
+        /* אנימציות */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* התקדמות */
+        .progress-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 10px;
+            background: var(--success);
+            width: 0%;
+            transition: width 0.5s;
+            border-radius: 20px 20px 0 0;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="background-overlay"></div>
+
+    <div id="game-container">
+        <div class="progress-bar" id="progress"></div>
+        
+        <!-- מסך פתיחה -->
+        <div id="start-screen">
+            <h1>ברוכים הבאים למרפאת הסיפורים!</h1>
+            <p style="font-size: 1.5rem; margin-bottom: 30px;">
+                יש לנו כמה משפטים "חולים" שצריכים עזרה.<br>
+                עזרו לדוקטור למצוא את המילה השגויה ולתקן אותה.
+            </p>
+            <button class="action-btn" onclick="startGame()">התחל משחק</button>
+        </div>
+
+        <!-- אזור המשחק -->
+        <div id="game-play" style="display: none;">
+            <div id="instruction-text">לחץ על המילה השגויה במשפט:</div>
+            
+            <div class="sentence-container" id="sentence-area">
+                <!-- המילים יוכנסו כאן דינמית -->
+            </div>
+
+            <div id="options-area">
+                <div style="font-size: 1.2rem; margin-bottom: 10px;">בחר את המילה הנכונה:</div>
+                <div id="buttons-wrapper" style="display: flex; flex-direction: column; gap: 10px;"></div>
+            </div>
+
+            <div id="message"></div>
+        </div>
+
+        <!-- מסך סיום -->
+        <div id="end-screen" style="display: none;">
+            <h1 style="color: var(--success); font-size: 3rem;">כל הכבוד דוקטור!!</h1>
+            <h2 style="font-size: 2rem;">הצלת את הסיפור</h2>
+            <div style="font-size: 5rem; margin: 20px;">🏆👨‍⚕️⚽</div>
+            <button class="action-btn" onclick="location.reload()">שחק שוב</button>
+        </div>
+    </div>
+
+    <script>
+        // נתונים (מבוסס על התמונות ששלחת)
+        const levels = [
+            {
+                sentence: ["לפני", "המשחק,", "עילאיי", "נעל", "נמלים", "חדשות"],
+                errorIndex: 4, // נמלים
+                correctWord: "נעליים",
+                options: ["נמרים", "נמלים", "נעליים"]
+            },
+            {
+                sentence: ["אבא", "הזמין", "לעילאיי", "סטייק", "עציץ", "וטעים"],
+                errorIndex: 4, // עציץ
+                correctWord: "עסיסי",
+                options: ["עסיסי", "עגולי", "בסיסי"]
+            },
+            {
+                sentence: ["הקהל", "הגדול", "ישב", "בביצה", "והריע"],
+                errorIndex: 3, // בביצה
+                correctWord: "ביציע",
+                options: ["בריצה", "בביצה", "ביציע"]
+            },
+            {
+                sentence: ["עילאיי", "בעט", "בחוזקה", "בכד", "ונכנס", "גול!"],
+                errorIndex: 3, // בכד
+                correctWord: "בכדור",
+                options: ["בכד", "בכדור", "בגדר"]
+            },
+            {
+                sentence: ["השחקנים", "לבשו", "חומצה", "אדומה"],
+                errorIndex: 2, // חומצה
+                correctWord: "חולצה",
+                options: ["חמוצה", "קפוצה", "חולצה"]
+            }
+        ];
+
+        let currentLevel = 0;
+        let isWaitingForWord = true; // האם מחכים שהמשתמש ילחץ על מילה או על אפשרות
+
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-play').style.display = 'flex';
+            loadLevel();
+        }
+
+        function loadLevel() {
+            // איפוס מצב
+            isWaitingForWord = true;
+            document.getElementById('options-area').style.display = 'none';
+            document.getElementById('instruction-text').innerText = "לחץ על המילה השגויה במשפט:";
+            document.getElementById('instruction-text').style.color = "#333";
+            document.getElementById('message').innerText = "";
+            document.getElementById('buttons-wrapper').innerHTML = "";
+            
+            // עדכון פס התקדמות
+            const progress = (currentLevel / levels.length) * 100;
+            document.getElementById('progress').style.width = `${progress}%`;
+
+            // בניית המשפט
+            const container = document.getElementById('sentence-area');
+            container.innerHTML = '';
+            
+            const levelData = levels[currentLevel];
+            
+            levelData.sentence.forEach((word, index) => {
+                const span = document.createElement('span');
+                span.innerText = word;
+                span.className = 'word';
+                span.dataset.index = index;
+                span.onclick = () => handleWordClick(index, span);
+                container.appendChild(span);
+            });
+        }
+
+        function handleWordClick(index, element) {
+            if (!isWaitingForWord) return;
+
+            const levelData = levels[currentLevel];
+            const messageEl = document.getElementById('message');
+
+            if (index === levelData.errorIndex) {
+                // הצלחה - מצא את המילה השגויה
+                element.classList.add('correct-target');
+                messageEl.innerText = "מעולה! עכשיו בחר את התיקון:";
+                messageEl.className = "msg-info";
+                
+                // מעבר לשלב הבא בתוך השלב (בחירת מילה)
+                isWaitingForWord = false;
+                showOptions(levelData.options, levelData.correctWord, element);
+            } else {
+                // טעות - בחר מילה לא נכונה
+                element.classList.add('wrong-choice');
+                messageEl.innerText = "אופס! נסה שנית, זו מילה תקינה.";
+                messageEl.className = "msg-error";
+                setTimeout(() => element.classList.remove('wrong-choice'), 500);
+            }
+        }
+
+        function showOptions(options, correctWord, wordElement) {
+            const optionsArea = document.getElementById('options-area');
+            const buttonsWrapper = document.getElementById('buttons-wrapper');
+            
+            optionsArea.style.display = 'flex';
+            document.getElementById('instruction-text').innerText = "בחר את המילה הנכונה להחליף את: " + wordElement.innerText;
+
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.innerText = opt;
+                btn.className = 'option-btn';
+                btn.onclick = () => handleOptionClick(btn, opt, correctWord, wordElement);
+                buttonsWrapper.appendChild(btn);
+            });
+        }
+
+        function handleOptionClick(btn, selectedOption, correctWord, wordElement) {
+            const messageEl = document.getElementById('message');
+
+            if (selectedOption === correctWord) {
+                // הצלחה מלאה
+                btn.classList.add('correct');
+                messageEl.innerText = "תיקנת את המשפט!";
+                messageEl.className = "msg-success";
+                
+                // עדכון ויזואלי של המשפט
+                wordElement.innerText = correctWord;
+                wordElement.classList.remove('correct-target');
+                wordElement.classList.add('fixed');
+                
+                document.getElementById('options-area').style.display = 'none';
+                document.getElementById('instruction-text').innerText = "כל הכבוד!";
+
+                // המתנה קצרה ומעבר לשלב הבא
+                setTimeout(() => {
+                    currentLevel++;
+                    if (currentLevel < levels.length) {
+                        loadLevel();
+                    } else {
+                        showEndScreen();
+                    }
+                }, 2000);
+
+            } else {
+                // טעות בבחירת האופציה
+                btn.classList.add('wrong');
+                messageEl.innerText = "אופס! נסה שנית.";
+                messageEl.className = "msg-error";
+            }
+        }
+
+        function showEndScreen() {
+            document.getElementById('progress').style.width = `100%`;
+            document.getElementById('game-play').style.display = 'none';
+            document.getElementById('end-screen').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
